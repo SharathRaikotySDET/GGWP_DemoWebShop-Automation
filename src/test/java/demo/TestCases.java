@@ -1,6 +1,8 @@
 package demo;
 
 import demo.wrappers.Wrappers;
+
+import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
@@ -11,6 +13,7 @@ import org.openqa.selenium.logging.LogType;
 import org.openqa.selenium.logging.LoggingPreferences;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.testng.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -18,62 +21,99 @@ import org.testng.annotations.Test;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.logging.Level;
 
 public class TestCases {
     ChromeDriver driver;
+    WebDriverWait wait;
+    static String generatedEmail;
+    String password = "Test@1234";
 
-    @Test
-    public void testCase01() throws InterruptedException {
-        driver.get("https://forms.gle/wjPkzeSEk1CM7KgGA");
-        String title = driver.getTitle();
-        System.out.println(title);
-        long epoch = System.currentTimeMillis() / 1000;
-        System.out.println(epoch);
+    @Test(priority = 1)
+    public void testCase01_RegisterUser() throws InterruptedException {
+        System.out.println("Start of Testcase01 ");
+        driver.get("https://demowebshop.tricentis.com/");
 
-        WebElement name = driver.findElement(By.xpath("(//input[@type='text'])[1]"));
-        Wrappers.sendKeys(name, "Crio Learner", driver);
 
-        WebElement answer = driver.findElement(By.xpath("//textarea[@aria-label='Your answer']"));
-        Wrappers.sendKeys(answer, "I want to be the best QA Engineer!" + epoch, driver);
+        Wrappers.click(driver.findElement(By.xpath("//a[contains(text(),'Register')]")), driver);
+        Wrappers.click(driver.findElement(By.id("gender-male")), driver);
+        Wrappers.sendKeys(driver.findElement(By.id("FirstName")), "Sharath", driver);
+        Wrappers.sendKeys(driver.findElement(By.id("LastName")), "raikoty", driver);
 
-        WebElement option2 = driver.findElement(By.xpath("(//div[@class='AB7Lab Id5V1'])[2]"));
-        Wrappers.click(option2, driver);
+        generatedEmail = "sharath" + System.currentTimeMillis() + "@test.com";
+        Wrappers.sendKeys(driver.findElement(By.id("Email")), generatedEmail, driver);
 
-        Wrappers.click(driver.findElement(By.xpath("(//div[@class='uHMk6b fsHoPb'])[1]")), driver);
-        Wrappers.click(driver.findElement(By.xpath("(//div[@class='uHMk6b fsHoPb'])[2]")), driver);
-        Wrappers.click(driver.findElement(By.xpath("(//div[@class='uHMk6b fsHoPb'])[4]")), driver);
-        WebElement dropdownTrigger = driver
-                .findElement(By.xpath("//div[@class='MocG8c HZ3kWc mhLiyf LMgvRb KKjvXb DEh1R']"));
-        Wrappers.click(dropdownTrigger, driver);
+        Wrappers.sendKeys(driver.findElement(By.id("Password")), password, driver);
+        Wrappers.sendKeys(driver.findElement(By.id("ConfirmPassword")), password, driver);
+        Wrappers.click(driver.findElement(By.id("register-button")), driver);
+       //Thread.sleep(3000);
+        String successMessage = driver.findElement(By.xpath("//div[@class='result']")).getText();
+        Assert.assertTrue(successMessage.contains("Your registration completed"), "Registration Failed");
 
-        Thread.sleep(1000);
-
-        WebElement mrOption = driver.findElement(By.xpath("//div[@role='option' and .//span[text()='Mr']]"));
-       //javascript code click on dropdown element
-        JavascriptExecutor js = (JavascriptExecutor) driver;
-        js.executeScript("arguments[0].scrollIntoView(true);", mrOption);
-
-        js.executeScript("arguments[0].click();", mrOption);
-        //to get current date and format it
-        LocalDate curenDate = LocalDate.now();
-        LocalDate requiredDate = curenDate.minusDays(7);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-        String formattedDate = requiredDate.format(formatter);
-
-        WebElement dateInput = driver.findElement(By.xpath("//input[@type='date']"));
-        Wrappers.sendKeys(dateInput, formattedDate, driver);
-
-        Wrappers.sendKeys(driver.findElement(By.xpath("//input[@aria-label='Hour']")), "07", driver);
-        Wrappers.sendKeys(driver.findElement(By.xpath("//input[@aria-label='Minute']")), "30", driver);
-       //click on submit button
-        WebElement submitButton = driver.findElement(By.xpath("//span[text()='Submit']"));
-        Wrappers.click(submitButton, driver);
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        WebElement successMessage=wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath("//div[text()='Thanks for your response, Automation Wizard!']")));
-       //print success message
-        System.out.println("Success Message is" +successMessage.getText());
+        System.out.println("Generated Email: " + generatedEmail);
+        Wrappers.click(driver.findElement(By.xpath("//a[contains(text(),'Log out')]")), driver);
+        System.out.println("End of Testcase01 ");
     }
+
+    @Test(priority = 2, dependsOnMethods = "testCase01_RegisterUser")
+    public void testCase02_LoginWithValidCredentials() {
+        System.out.println("Start of Testcase02 ");
+        driver.get("https://demowebshop.tricentis.com/login");
+
+        Wrappers.sendKeys(driver.findElement(By.id("Email")), generatedEmail, driver);
+        Wrappers.sendKeys(driver.findElement(By.id("Password")), password, driver);
+        Wrappers.click(driver.findElement(By.cssSelector("input[value='Log in']")), driver);
+
+        WebElement account = driver.findElement(By.xpath("//a[contains(text(),'Log out')]"));
+        Assert.assertTrue(account.isDisplayed(), "Login Failed");
+        System.out.println("End of Testcase02 ");
+    }
+
+    @Test(priority = 3)
+    public void testCase03_LoginWithInvalidCredentials() {
+        driver.get("https://demowebshop.tricentis.com/login");
+
+        Wrappers.sendKeys(driver.findElement(By.id("Email")), "invaliduser@test.com", driver);
+        Wrappers.sendKeys(driver.findElement(By.id("Password")), "WrongPass123", driver);
+        Wrappers.click(driver.findElement(By.cssSelector("input[value='Log in']")), driver);
+
+        String errorMessage = driver.findElement(By.className("message-error")).getText();
+        Assert.assertTrue(errorMessage.contains("Login was unsuccessful"), "Error message not displayed for invalid login");
+    }
+
+    @Test(priority = 4)
+    public void testCase04_SearchExistingProduct() {
+        driver.get("https://demowebshop.tricentis.com/login");
+        Wrappers.sendKeys(driver.findElement(By.id("Email")), generatedEmail, driver);
+        Wrappers.sendKeys(driver.findElement(By.id("Password")), password, driver);
+        Wrappers.click(driver.findElement(By.cssSelector("input[value='Log in']")), driver);
+
+        Wrappers.sendKeys(driver.findElement(By.xpath("//input[@id='small-searchterms']")), "Laptop", driver);
+        Wrappers.click(driver.findElement(By.cssSelector("input[value='Search']")), driver);
+        List<WebElement> products = driver.findElements(By.xpath("//div[@class='product-item']"));
+      
+        Assert.assertTrue(products.size()>0, "Product Search Failed");
+    }
+    public void testCase05_SearchWithoutProduct() {
+        driver.get("https://demowebshop.tricentis.com/login");
+        Wrappers.sendKeys(driver.findElement(By.id("Email")), generatedEmail, driver);
+        Wrappers.sendKeys(driver.findElement(By.id("Password")), password, driver);
+        Wrappers.click(driver.findElement(By.cssSelector("input[value='Log in']")), driver);
+
+        Wrappers.sendKeys(driver.findElement(By.xpath("//input[@id='small-searchterms']")), "", driver);
+        wait.until(ExpectedConditions.alertIsPresent()); // Wait for alert
+
+        Alert alert = driver.switchTo().alert();
+        System.out.println("Alert Text: " + alert.getText());
+
+        alert.accept();
+      
+       
+    }
+  
+
+    
 
     @BeforeTest
     public void startBrowser() {
